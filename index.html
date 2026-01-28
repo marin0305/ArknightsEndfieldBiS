@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+</head>
+<body style="zoom: 1; transform: scale(3); transform-origin: 0 0; width: 33.33%;">
+    <a href="https://wiki.biligame.com/zmd/%E6%AD%A6%E5%99%A8%E5%9B%BE%E9%89%B4">圖片來源：bilibili-Wiki</a>
+    <br>
+    <label>基礎屬性</label>
+    <select id="tag1" ></select>
+
+    <br>
+
+    <label>附加屬性</label>
+    <select id="tag2" ></select>
+
+    <br>
+
+    <label>技能屬性</label>
+    <select id="tag3" ></select>
+
+    <br>
+
+    <button onclick="clearSelection()">列出全部</button>
+    <div id="result"></div>
+
+    <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th>圖片</th>
+                <th>名稱</th>
+                <th>屬性1</th>
+                <th>屬性2</th>
+                <th>屬性3</th>
+            </tr>
+        </thead>
+        <tbody id="result-body">
+            <tr><td colspan="4" align="center">請選擇屬性進行查詢</td></tr>
+        </tbody>
+    </table>
+
+    <footer style="font-size: 12px; color: gray; margin-top: 20px; text-align: center;">
+        <p>本站為個人非營利學習專案，所使用之遊戲圖像、數據均來自網路（Bilibili、Wiki）。</p>
+        <p>相關資源之版權歸屬原遊戲開發商所有，若有侵權請告知，將立即配合移除。</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>
