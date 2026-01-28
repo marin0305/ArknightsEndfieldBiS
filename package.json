@@ -1,6 +1,6 @@
 {
   "name": "arknightsendfieldbis",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -9,14 +9,15 @@
   },
   "build": {
     "appId": "com.yourname.weapontool",
-    "productName": "畢業基質篩選器",
+    "productName": "AEBS",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "files": [
       "**/*"

@@ -5,11 +5,15 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
     height: 900,
+    icon: path.join(__dirname, 'build', 'icon.ico'),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      devTools: false
     }
   });
+
+  win.setMenuBarVisibility(false);
 
   win.loadFile('index.html');
 }
