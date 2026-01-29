@@ -1,49 +1,323 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>畢業基質篩選器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Inter:ital,wght@0,400;0,700;1,900&display=swap');
+
+        :root {
+            --ef-yellow: #ffcf00;
+            --ef-black: #000000;
+            --ef-white: #ffffff;
+            --ef-gray: #f2f2f2;
+            --ef-border: #e5e5e5;
+        }
+
+        body {
+            background-color: var(--ef-white);
+            color: var(--ef-black);
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #bg-grid {
+            position: fixed; inset: 0; z-index: -1;
+            background-image: 
+                linear-gradient(var(--ef-border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--ef-border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.4;
+        }
+
+        #cursor-glow {
+            position: fixed; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(255,207,0,0.08) 0%, transparent 70%);
+            border-radius: 50%; pointer-events: none; z-index: -1;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+
+        .filter-section { position: relative; z-index: 50; }
+
+        .ef-drop-container {
+            position: relative; background: var(--ef-gray);
+            border-bottom: 2px solid var(--ef-black);
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .ef-drop-container:hover { background: #e8e8e8; }
+        .ef-drop-container.active { 
+            background: var(--ef-white); 
+            z-index: 100; 
+        }
+
+        .ef-drop-menu {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: var(--ef-white); border: 2px solid var(--ef-black);
+            z-index: 999;
+            display: none; transform-origin: top;
+            max-height: 280px; overflow-y: auto;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            margin-top: 4px;
+        }
+        .ef-drop-item {
+            padding: 14px 18px; font-size: 14px; font-weight: 700;
+            border-bottom: 1px solid var(--ef-border); transition: 0.2s;
+            color: #666;
+        }
+        .ef-drop-item:hover { 
+            background: var(--ef-yellow); 
+            color: var(--ef-black);
+            padding-left: 26px; 
+        }
+
+        .gear-card {
+            background: var(--ef-white); border: 1px solid var(--ef-border);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative; z-index: 1;
+        }
+        .gear-card:hover {
+            transform: translateY(-6px); border-color: var(--ef-black);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            z-index: 2;
+        }
+        
+        .gear-card::after {
+            content: ""; position: absolute; top: 0; right: 0; width: 0; height: 2px;
+            background: var(--ef-yellow); transition: width 0.4s ease;
+        }
+        .gear-card:hover::after { width: 100%; }
+
+        #boot-screen {
+            position: fixed; inset: 0; background: var(--ef-white); z-index: 2000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .boot-line { width: 200px; height: 2px; background: var(--ef-border); overflow: hidden; }
+        .boot-loader { height: 100%; background: var(--ef-black); width: 0%; transition: 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+
+        @media (max-width: 768px) {
+            .ef-title { font-size: 2.2rem; }
+            .gear-name { font-size: 14px !important; }
+            .stat-label { font-size: 8px !important; }
+            .stat-val { font-size: 11px !important; }
+            #bg-grid { background-size: 25px 25px; } /* 手機網格更細密 */
+        }
+    </style>
 </head>
-<body style="zoom: 1; transform: scale(3); transform-origin: 0 0; width: 33.33%;">
-    <a href="https://wiki.biligame.com/zmd/%E6%AD%A6%E5%99%A8%E5%9B%BE%E9%89%B4">圖片來源：bilibili-Wiki</a>
-    <br>
-    <label>基礎屬性</label>
-    <select id="tag1" ></select>
+<body class="p-5 md:p-12">
 
-    <br>
+    <div id="bg-grid"></div>
+    <div id="cursor-glow"></div>
 
-    <label>附加屬性</label>
-    <select id="tag2" ></select>
+    <div id="boot-screen">
+        <div class="mb-8 animate__animated animate__pulse animate__infinite">
+            <svg width="45" height="45" viewBox="0 0 100 100"><rect width="100" height="100" fill="black"/></svg>
+        </div>
+        <div class="boot-line"><div id="boot-progress" class="boot-loader"></div></div>
+        <p class="mt-4 text-[10px] tracking-[0.6em] font-black uppercase text-zinc-400">Initializing_Endfield_OS</p>
+    </div>
 
-    <br>
+    <div class="max-w-7xl mx-auto">
+        <header class="relative mb-12 flex flex-col md:flex-row justify-between items-start md:items-end animate__animated animate__fadeIn">
+            <div class="border-l-[12px] border-black pl-6">
+                <h1 class="ef-title text-5xl font-black italic tracking-tighter uppercase leading-none">
+                    Endfield <span class="text-yellow-400">Data</span>
+                </h1>
+                <p class="text-[10px] text-zinc-400 mt-3 tracking-[0.4em] font-bold uppercase">// Access_Node: BiS_Data_Center_V4</p>
+            </div>
+            <button onclick="clearUI()" class="mt-8 md:mt-0 group relative overflow-hidden bg-black text-white px-12 py-4">
+                <span class="relative z-10 text-[11px] font-black tracking-[0.2em] uppercase transition-colors group-hover:text-black">全部武器</span>
+                <div class="absolute inset-0 bg-yellow-400 translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
+            </button>
+        </header>
 
-    <label>技能屬性</label>
-    <select id="tag3" ></select>
+        <!--屬性詞條選單-->
+        <div class="filter-section grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-16 animate__animated animate__fadeInUp">
+            <div class="space-y-2">
+                <label class="text-[15px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-1">基礎屬性</label>
+                <div class="ef-drop-container" onclick="toggleDrop(1, event)">
+                    <div id="val-1" class="p-4 text-sm font-black italic uppercase tracking-tight">-- SELECT --</div>
+                    <div id="menu-1" class="ef-drop-menu"></div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <label class="text-[15px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-1">附加屬性</label>
+                <div class="ef-drop-container" onclick="toggleDrop(2, event)">
+                    <div id="val-2" class="p-4 text-sm font-black italic uppercase tracking-tight">-- SELECT --</div>
+                    <div id="menu-2" class="ef-drop-menu"></div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <label class="text-[15px] font-black text-zinc-400 uppercase tracking-[0.3em] ml-1">技能屬性</label>
+                <div class="ef-drop-container" onclick="toggleDrop(3, event)">
+                    <div id="val-3" class="p-4 text-sm font-black italic uppercase tracking-tight">-- SELECT --</div>
+                    <div id="menu-3" class="ef-drop-menu"></div>
+                </div>
+            </div>
+        </div>
 
-    <br>
+        <div id="data-count" class="text-[9px] text-zinc-400 font-bold mb-6 text-right uppercase tracking-[0.4em]"></div>
 
-    <button onclick="clearSelection()">列出全部</button>
-    <div id="result"></div>
+        <div id="result-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8"></div>
 
-    <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-        <thead>
-            <tr style="background-color: #f2f2f2;">
-                <th>圖片</th>
-                <th>名稱</th>
-                <th>屬性1</th>
-                <th>屬性2</th>
-                <th>屬性3</th>
-            </tr>
-        </thead>
-        <tbody id="result-body">
-            <tr><td colspan="4" align="center">請選擇屬性進行查詢</td></tr>
-        </tbody>
-    </table>
+        <footer class="mt-32 py-20 border-t border-zinc-100 flex flex-col items-center opacity-40">
+            <div class="flex space-x-12 mb-8">
+                <div class="w-1 h-12 bg-black"></div>
+                <div class="w-1 h-12 bg-yellow-400"></div>
+                <div class="w-1 h-12 bg-black"></div>
+            </div>
+            <div class="text-[18px] tracking-[0.5em] font-medium uppercase text-center">
+                <p>本站/程式為個人非營利學習專案，所使用之遊戲圖像、數據均來自網路（Bilibili、Wiki）。</p>
+                <p>相關資源之版權歸屬原遊戲開發商所有，若有侵權請告知，將立即配合移除。</p>
+            </div>
+            
+        </footer>
+    </div>
 
-    <footer style="font-size: 12px; color: gray; margin-top: 20px; text-align: center;">
-        <p>本站/程式為個人非營利學習專案，所使用之遊戲圖像、數據均來自網路（Bilibili、Wiki）。</p>
-        <p>相關資源之版權歸屬原遊戲開發商所有，若有侵權請告知，將立即配合移除。</p>
-    </footer>
-    <script src="script.js"></script>
+    <script>
+        let db;
+        let selectedTags = ["", "", ""];
+
+        async function init() {
+            const bar = document.getElementById('boot-progress');
+            try {
+                bar.style.width = '40%';
+                const config = { locateFile: file => `https://sql.js.org/dist/${file}` };
+                const SQL = await initSqlJs(config);
+                
+                const res = await fetch('./data.db');
+                const buf = await res.arrayBuffer();
+                db = new SQL.Database(new Uint8Array(buf));
+                
+                bar.style.width = '100%';
+                setTimeout(() => {
+                    const screen = document.getElementById('boot-screen');
+                    screen.classList.add('animate__animated', 'animate__fadeOut');
+                    setTimeout(() => screen.style.display = 'none', 600);
+                    renderDrops();
+                    search();
+                }, 800);
+            } catch (e) { console.error("Database Error:", e); }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const glow = document.getElementById('cursor-glow');
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        function renderDrops() {
+            const res = db.exec("SELECT category, tag_name FROM tags");
+            if (!res.length) return;
+            const tags = res[0].values;
+
+            for (let i = 1; i <= 3; i++) {
+                const menu = document.getElementById(`menu-${i}`);
+                menu.innerHTML = `<div class="ef-drop-item italic text-zinc-300 font-black" onclick="selectTag(${i}, '', '-- SELECT --')">ALL_RECORDS</div>`;
+                
+                tags.filter(t => t[0] === i).forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = "ef-drop-item";
+                    item.innerText = t[1];
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        selectTag(i, t[1], t[1]);
+                    };
+                    menu.appendChild(item);
+                });
+            }
+        }
+
+        function toggleDrop(id, e) {
+            e.stopPropagation();
+            const menu = document.getElementById(`menu-${id}`);
+            const container = menu.parentElement;
+            const isOpen = menu.style.display === 'block';
+            
+            document.querySelectorAll('.ef-drop-menu').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.ef-drop-container').forEach(c => c.classList.remove('active'));
+            
+            if (!isOpen) {
+                menu.style.display = 'block';
+                container.classList.add('active');
+            }
+        }
+
+        function selectTag(cat, val, txt) {
+            selectedTags[cat-1] = val;
+            document.getElementById(`val-${cat}`).innerText = txt;
+            document.querySelectorAll('.ef-drop-menu').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.ef-drop-container').forEach(c => c.classList.remove('active'));
+            search();
+        }
+
+        window.onclick = () => {
+            document.querySelectorAll('.ef-drop-menu').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.ef-drop-container').forEach(c => c.classList.remove('active'));
+        };
+
+        function search() {
+            const grid = document.getElementById('result-grid');
+            const params = selectedTags.map(s => s || '%');
+
+            try {
+                const res = db.exec("SELECT product_name, tag1, tag2, tag3 FROM products WHERE tag1 LIKE ? AND tag2 LIKE ? AND tag3 LIKE ?", params);
+                grid.innerHTML = "";
+                
+                if (res.length > 0) {
+                    const rows = res[0].values;
+                    document.getElementById('data-count').innerText = `// DATA_LOG: ${rows.length}_UNITS_SYNCED`;
+                    
+                    rows.forEach((row, i) => {
+                        const card = document.createElement('div');
+                        card.className = "gear-card animate__animated animate__fadeInUp";
+                        card.style.animationDelay = `${i * 0.05}s`;
+                        
+                        // 輸出詞條樣式
+                        card.innerHTML = `
+                            <div class="aspect-square bg-[#fcfcfc] flex items-center justify-center p-6 md:p-10 relative group overflow-hidden border-b border-zinc-100">
+                                <img src="./images/${row[0]}.png" class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110" onerror="this.src='./images/default.png';">
+                                <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-zinc-100 group-hover:border-yellow-400 transition-colors"></div>
+                            </div>
+                            <div class="p-4 md:p-6">
+                                <h3 class="gear-name font-black italic text-base tracking-tighter uppercase mb-5 border-l-4 border-black pl-3 leading-none truncate">${row[0]}</h3>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-end border-b border-zinc-50 pb-1">
+                                        <span class="stat-label text-[15px] font-black text-zinc-300 uppercase italic">基礎屬性</span>
+                                        <span class="stat-val text-xs md:text-sm font-bold text-zinc-800">${row[1]}</span>
+                                    </div>
+                                    <div class="flex justify-between items-end border-b border-zinc-50 pb-1">
+                                        <span class="stat-label text-[15px] font-black text-zinc-300 uppercase italic">附加屬性</span>
+                                        <span class="stat-val text-xs md:text-sm font-bold text-zinc-800">${row[2]}</span>
+                                    </div>
+                                    <div class="mt-6 pt-4 bg-zinc-50/80 p-3 border-r-[6px] border-yellow-400">
+                                        <span class="text-[20px] font-black text-yellow-500 uppercase tracking-widest italic">// 技能屬性</span>
+                                        <p class="md:text-[18px] text-zinc-500 font-bold leading-tight mt-2 line-clamp-2 h-8 italic">${row[3]}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function clearUI() {
+            selectedTags = ["", "", ""];
+            [1,2,3].forEach(i => document.getElementById(`val-${i}`).innerText = '-- SELECT --');
+            search();
+        }
+
+        init();
+    </script>
 </body>
 </html>
